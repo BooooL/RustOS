@@ -5,10 +5,13 @@
 name = "external"
 version = "0.0.1"
 authors = [ "you@example.com" ]
+features = [ "no_std" ]
 
 [lib]
 name = "external"
 
 
 [dependencies.core]
-git = "https://github.com/RustOS-Fork-Holding-Ground/rust.git"
+git = "https://github.com/ryanra/rust.git"
+branch = "rustos-nightly"
+
