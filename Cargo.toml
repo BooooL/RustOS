@@ -9,29 +9,25 @@ crate-type = [ "staticlib" ]
 
 
 [dependencies.core]
-git = "https://github.com/RustOS-Fork-Holding-Ground/rust.git"
+path = "lib/rust/cargo/core"
 
 [dependencies.alloc]
-git = "https://github.com/RustOS-Fork-Holding-Ground/rust.git"
+path = "lib/rust/cargo/alloc"
 default-features = false
 features = [ "external_crate" ]
 
 [dependencies.collections]
-git = "https://github.com/RustOS-Fork-Holding-Ground/rust.git"
-
-
-[dependencies.bitflags]
-git = "http://github.com/rust-lang/bitflags.git"
+path = "lib/rust/cargo/collections"
 
 [dependencies.external]
 path = "bump-pointer"
 
-[dependencies.lazy_static_spin]
-git = "https://github.com/RustOS-Fork-Holding-Ground/lazy-static-spin"
-branch = "spin"
+[dependencies.lazy_static]
+path = "lib/lazy-static.rs"
 
 [dependencies.spin]
-git = "https://github.com/RustOS-Fork-Holding-Ground/spinlock-rs"
+path = "lib/spinlock-rs"
+features = [ "no_std" ]
 
 [dependencies.rlibc]
-rlibc = "https://github.com/RustOS-Fork-Holding-Ground/rlibc"
+path = "lib/rlibc"

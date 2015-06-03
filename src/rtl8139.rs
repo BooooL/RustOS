@@ -26,7 +26,7 @@ impl Rtl8139 { // TODO(ryan): is there already a frame oriented interface in std
 
   pub fn new(granter: PortGranter) -> Rtl8139 {
 
-    let p = |&: off: u16| -> Port {
+    let p = |off: u16| -> Port {
       granter.get(off as usize)
     };
 
@@ -77,7 +77,7 @@ impl NetworkDriver for Rtl8139
   
   fn address(&mut self) -> [u8; 6] {
     let mut ret = [0; 6];
-    for i in range(0, 6us) {
+    for i in 0..6usize {
       ret[i] = self.id[i].in_b();
     }
     ret

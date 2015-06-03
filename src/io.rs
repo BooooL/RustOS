@@ -32,7 +32,7 @@ pub trait Writer {
       error: Result<(), <T as Writer>::Err>,
     }
 
-    impl<'a, T: ?Sized + Writer + 'a> fmt::Writer for Adaptor<'a, T> {
+    impl<'a, T: ?Sized + Writer + 'a> fmt::Write for Adaptor<'a, T> {
       fn write_str(&mut self, s: &str) -> fmt::Result {
         match self.inner.write(s.as_bytes()) {
           Ok(_) => Ok(()),

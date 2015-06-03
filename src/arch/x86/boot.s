@@ -44,6 +44,7 @@ _start:
 	# we'll create a C entry point called kernel_main and call it here.
 	pushl %ebx # push multiboot_info
         pushl %eax # push magic
+	call enable_sse
 	call main
 
 	# In case the function returns, we'll want to put the computer into an
@@ -57,7 +58,18 @@ _start:
 .Lhang:
 	jmp .Lhang
 
-		
+
+enable_sse:
+	movl %cr0, %eax
+	andl $0xfffffffb, %eax
+	orl $0x2, %eax
+	movl %eax, %cr0
+	movl %cr4, %eax
+	orl $0x200, %eax
+	orl $0x400, %eax
+	movl %eax, %cr4
+	ret
+	
 # Set the size of the _start symbol to the current location '.' minus its start.
 # This is useful when debugging or when you implement call tracing.
 .size _start, . - _start

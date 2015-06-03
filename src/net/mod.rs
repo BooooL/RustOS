@@ -1,5 +1,4 @@
 use core::prelude::*;
-use core::num::Int;
 use core::mem::{size_of, transmute};
 
 use alloc::boxed::Box;
@@ -21,7 +20,7 @@ impl NetworkStack {
   pub fn test(&mut self) -> Result<(), ()> {
     let address = self.card.address();
     
-    for i in range(0, 10us) {
+    for i in (0..10usize) {
       write!(&mut self.card, "\nhello, etherworld! sending frame # {} !\n", i).ok().unwrap();
     }
 

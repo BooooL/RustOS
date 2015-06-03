@@ -1,3 +1,4 @@
+#![feature(no_std, core)]
 #![no_std]
 #![allow(unstable)]
 

@@ -119,7 +119,7 @@ impl Pci {
     assert_eq!(start_address % 4, 0);
 
     let mut v = Vec::new();
-    for i in range(0_u16, size / 4) {
+    for i in (0_u16..size / 4) {
       let (offset, function): (u8, u8) = unsafe { transmute((start_address + i*4) as u16) };
       v.push(self.read(bus, device, function, offset).unwrap());
     }
@@ -128,7 +128,7 @@ impl Pci {
 
   fn read_as<T>(&mut self, bus: u8, device: u8, start_address: u16) -> Box<T> {
     let v = self.read_bytes(bus, device, start_address, size_of::<T>() as u16);
-    let slice = v.as_slice();
+    let slice = &v[..];
     let read = read_into(slice);
     return read;
   }
@@ -161,8 +161,8 @@ impl DriverManager for Pci {
     let mut device_count: usize = 0;
 
     let mut io_offset: u32 = 0;
-    for bus in range(0, 256us) {
-      for device in range(0, 32us) {
+    for bus in 0..256usize {
+      for device in 0..32usize {
         match self.read_header(bus as u8, device as u8) {
           None => no_device_count += 1,
           Some(header) => {

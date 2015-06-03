@@ -66,7 +66,7 @@ impl IDT {
   }
   
   pub unsafe fn enable(&mut self) {
-    let (base, _): (u32, u32) = transmute(self.table.as_slice());
+    let (base, _): (u32, u32) = transmute(&self.table[..]);
     let limit: u16 = (self.table.len() * size_of::<IDTEntry>()) as u16;
     let layout = IDTLayout { base: base, limit: limit};
     asm!("lidt ($0)"

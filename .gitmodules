@@ -1,0 +1,18 @@
+[submodule "lib/rust"]
+	path = lib/rust
+	url = /home/ryan/src/rust
+[submodule "lib/spinlock-rs"]
+	path = lib/spinlock-rs
+	url = /home/ryan/src/spinlock-rs
+[submodule "lib/rlibc"]
+	path = lib/rlibc
+	url = /home/ryan/src/rlibc
+[submodule "lib/lazy-static-spin"]
+	path = lib/lazy-static-spin
+	url = https://github.com/RustOS-Fork-Holding-Ground/lazy-static-spin
+[submodule "lib/lazy-static.rs"]
+	path = lib/lazy-static.rs
+	url = https://github.com/Kimundi/lazy-static.rs
+[submodule "lazy-static"]
+	path = lib/lazy-static.rs
+	url = git@github.com:ryanra/lazy-static.rs.git

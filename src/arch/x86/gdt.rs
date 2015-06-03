@@ -91,7 +91,7 @@ impl GDT {
   pub fn enable(&mut self) {
     unsafe {
       let limit: u16 = (GDT_SIZE*size_of::<GDTEntry>()) as u16;
-      let (base, _): (u32, u32) = transmute(self.table.as_slice());
+      let (base, _): (u32, u32) = transmute(&self.table[..]);
       let mut real = GDTReal { limit: limit, base: base };
       debug!("limit: {}", limit);
       debug!("base: {}", base);

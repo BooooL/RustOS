@@ -33,7 +33,7 @@ impl Context {
   
   pub fn empty() -> Context {
     unsafe {
-        Context { stack: transmute::<u64, Box<[u8]>>(0_u64), instruction_pointer: transmute(0us), regs: Context::empty_regs(), esp: 0}
+        Context { stack: transmute::<u64, Box<[u8]>>(0_u64), instruction_pointer: transmute(0usize), regs: Context::empty_regs(), esp: 0}
     }
   }
 

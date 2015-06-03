@@ -6,7 +6,7 @@ QEMU=qemu-system-i386
 TARGET=i686-unknown-linux-gnu
 QEMUARGS=-device rtl8139,vlan=0 -net user,id=net0,vlan=0 -net dump,vlan=0,file=/tmp/rustos-dump.pcap
 
-.PHONY: all clean cleanproj run debug vb target/$(TARGET)/librustos*.a
+.PHONY: all clean cleanproj run debug vb target/$(TARGET)/librustos*.a rustos
 
 all: boot.bin
 
@@ -20,12 +20,13 @@ debug: boot.bin
 vb: boot.iso
 	virtualbox --debug --startvm rustos
 
+rustos: target/$(TARGET)/debug/librustos*.a src/*.rs
 
 
-target/$(TARGET)/librustos*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a
-	cargo build --target $(TARGET) --verbose
+target/$(TARGET)/debug/librustos*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a
+	cargo rustc -Cno-vectorize-loops --target $(TARGET) --verbose -- -L .
 
-boot.bin: src/arch/x86/link.ld boot.o target/$(TARGET)/librustos*.a interrupt.o context.o dependencies.o
+boot.bin: src/arch/x86/link.ld boot.o target/$(TARGET)/debug/librustos*.a interrupt.o context.o dependencies.o
 	$(LD) -o $@ -T $^
 
 boot.iso: boot.bin
@@ -53,4 +54,4 @@ clean: cleanproj
 
 cleanproj:
 	cargo clean -p rustos
-	rm -f *.bin *.img *.iso *.rlib *.a *.so *.o *.s
+	rm -f *.bin *.img *.iso *.rlib *.a *.so *.o *.s target/$(TARGET)/debug/librustos*.a
