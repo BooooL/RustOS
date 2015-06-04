@@ -24,7 +24,7 @@ rustos: target/$(TARGET)/debug/librustos*.a src/*.rs
 
 
 target/$(TARGET)/debug/librustos*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a
-	cargo rustc -Cno-vectorize-loops --target $(TARGET) --verbose -- -L .
+	cargo rustc --target $(TARGET) --verbose -- -L .
 
 boot.bin: src/arch/x86/link.ld boot.o target/$(TARGET)/debug/librustos*.a interrupt.o context.o dependencies.o
 	$(LD) -o $@ -T $^
