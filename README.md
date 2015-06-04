@@ -15,8 +15,8 @@ A simple, [language-based](https://en.wikipedia.org/wiki/Language-based_system) 
   * qemu (emulator) **or** grub-mkrescue (run an iso on a VM or hardware)
   * as
   * ld
-  * rustc (0.12.0)
-  * cargo (latest)
+  * rustc (1.2.0-nightly)
+  * cargo (1.2.0-nightly)
 2. Pull this repo `git clone https://github.com/ryanra/RustOS.git`
 3. Make sure to pull the submodules as well: `git submodule update --init`
 4. Run:
@@ -58,7 +58,7 @@ an interface for adding drivers and libraries)
 
 ### Current issues:
 1. ~~Linkage probelms~~ fixed!
-2. ~~Threading is buggy and needs more attention.~~ fixed! (no longer buggy, but still more to do!)
+2. Threading is buggy and needs more attention and more features.
 3. The current allocator never actually frees data and is just there to get `collections` working.
 
 ### Organization:
