@@ -1,72 +1,65 @@
 // TODO(ryan): it really looks like bulk of libgreen could be used here where pthread <-> core
 
 use core::prelude::*;
-//use std::one::{ONCE_INIT, Once};
 use core::cell::UnsafeCell;
-use core::mem::transmute;
+use core::mem::{transmute, transmute_copy};
 
 use alloc::boxed::Box;
 
-use collections::RingBuf;
-use collections::dlist::DList;
-
+use collections::LinkedList;
 
 use thread::context::Context;
 use thread::stack::Stack;
 
-struct Tcb { // thread control block
+// thread control block
+struct Tcb { 
   context: Context,
-  _stack: Stack
 }
 
-struct Scheduler<'a> { // invariant: current thread is at back of queue
-  queue: Box<RingBuf<Tcb> + 'a>
+// invariant: current thread is at back of queue
+pub struct Scheduler {
+  queue: LinkedList<Tcb>
 }
 
-lazy_static_spin! {
-  static SCHEDULER: UnsafeCell<Scheduler<'static>> = UnsafeCell::new(Scheduler::new());
+lazy_static! {
+  static ref SCHEDULER: UnsafeCell<Scheduler> = UnsafeCell::new(Scheduler::new());
 }
 
-extern "C" fn run_thunk(sched: usize, code: *mut (), env: *mut ()) -> ! {
-  let scheduler: &mut Scheduler = unsafe { transmute(sched) };
-  let c: |&mut Scheduler| -> () = unsafe { transmute((code, env)) };
-  c(scheduler);
+pub fn get_scheduler() -> &'static mut Scheduler {
+    unsafe { transmute(SCHEDULER.get()) }
+}
+
+#[no_mangle]
+extern "C" fn run_thunk(thunk: &Fn() -> ()) {
+  debug!("in run_thunk");
+  thunk();
   warn!("didn't unschedule finished thread");
   unreachable!();
 }
 
-extern "C" fn dummy() {
-  // TODO: eventually remove this and put the kernel in the scheduler as well
-} 
 
-impl<'a> Scheduler<'a> {
+impl Scheduler {
   
-  pub fn new<'a>() -> Scheduler<'a> {
-    let list: DList<Tcb> = DList::new();
-    let mut s = Scheduler { queue: box list as Box<RingBuf<Tcb>> };
-    let dummy_tcb = s.new_tcb(dummy);
-    s.queue.push(dummy_tcb); // put a dummy at back of queue and pretend it's current thread
-    s
+  pub fn new() -> Scheduler {
+    Scheduler { queue: LinkedList::new() }
   }
   
-  pub fn schedule(&mut self, func: extern "C" fn() -> ()) {
-    let current = self.queue.pop().unwrap();
+  pub fn schedule(&mut self, func: Box<Fn() -> ()>) {
     let new_tcb = self.new_tcb(func);
-    self.queue.push(new_tcb);
-    self.queue.push(current);
+    self.queue.push_front(new_tcb);
   }
   
-  fn new_tcb(&self, func: extern "C" fn() -> ()) -> Tcb {
+  fn new_tcb(&self, func: Box<Fn() -> ()>) -> Tcb {
     const STACK_SIZE: usize = 1024 * 1024;
-    let mut stack = Stack::new(STACK_SIZE);
+    let stack = Stack::new(STACK_SIZE);
 
-    let p  = move |:scheduler: &mut Scheduler| {
+    let p = move || {
       func();
-      scheduler.unschedule_current();
+      get_scheduler().unschedule_current();
     };
     
-    let c = Context::new(run_thunk, unsafe { transmute(&self) }, unsafe{ transmute(p)}, &mut stack);
-    Tcb { context: c, _stack: stack }
+    let c = Context::new(run_thunk, box p as Box<Fn() -> ()>, stack);
+    Tcb { context: c}
   }
   
   fn unschedule_current(&mut self) {
@@ -92,21 +85,24 @@ extern "C" fn test_thread() {
   debug!("in a test thread!");
   inner_thread_test(11);
   unsafe {
-    let s: *mut Scheduler = SCHEDULER.get();
-    debug!("leaving test thread!")    
-      (*s).unschedule_current(); 
+    let s = get_scheduler();
+    debug!("leaving test thread!"); 
+    s.unschedule_current(); 
   }
 }
 
 pub fn thread_stuff() {
   debug!("starting thread test");
   unsafe {
-    let s: *mut Scheduler = SCHEDULER.get();
+    let s: &mut Scheduler = get_scheduler();
 
-    debug!("orig sched 0x{:x}", s as u32)
-      //loop {};
-      (*s).schedule(test_thread);
-    (*s).switch();
-    debug!("back")
+    debug!("orig sched 0x{:x}", transmute_copy::<_, u32>(&s));
+    //loop {};
+    let t = || { test_thread() };
+    s.schedule(box || { loop {} }); // this will be filled in with current context
+    s.schedule(box t);
+    debug!("schedule okay");
+    s.switch();
+    debug!("back");
   }
 }

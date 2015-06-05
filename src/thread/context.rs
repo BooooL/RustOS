@@ -11,7 +11,7 @@
 // except according to those terms.
 
 use core::prelude::*;
-use core::mem::transmute;
+use core::mem::{transmute, transmute_copy};
 use core::raw;
 #[cfg(target_arch = "x86_64")]
 use core::simd;
@@ -25,6 +25,8 @@ mod libc {
   pub type usizeptr_t = *const usize;
 }
 
+pub type InitFn = extern fn(arg: &Fn() -> ()) -> ();
+
 // FIXME #7761: Registers is boxed so that it is 16-byte aligned, for storing
 // SSE regs.  It would be marginally better not to do this. In C++ we
 // use an attribute on a struct.
@@ -34,58 +36,38 @@ mod libc {
 pub struct Context {
   /// Hold the registers while the task or scheduler is suspended
   regs: Box<Registers>,
-  /// Lower bound and upper bound for the stack
-  _stack_bounds: Option<(usize, usize)>,
+  _stack: Stack,
+  _closure: Box<Fn() -> ()>
 }
 
-pub type InitFn = extern "C" fn(usize, *mut (), *mut ()) -> !;
+
 
 impl Context {
   pub fn empty() -> Context {
     Context {
       regs: new_regs(),
-      _stack_bounds: None,
+      _stack: Stack::new(0),
+      _closure: box || {}
     }
   }
 
   /// Create a new context that will resume execution by running proc()
-  ///
-  /// The `init` function will be run with `arg` and the `start` procedure
-  /// split up into code and env pointers. It is required that the `init`
-  /// function never return.
-  ///
-  /// FIXME: this is basically an awful the interface. The main reason for
-  ///        this is to reduce the number of allocations made when a green
-  ///        task is spawned as much as possible
-  pub fn new<F: FnOnce() + Send>(init: InitFn, arg: usize, start: F,
-                                 stack: &mut Stack) -> Context
+  pub fn new(init: InitFn, arg: Box<Fn() -> ()>, stack: Stack) -> Context
   {
     let sp: *const usize = stack.end();
     let sp: *mut usize = sp as *mut usize;
     // Save and then immediately load the current context,
     // which we will then modify to call the given function when restored
     let mut regs = new_regs();
-
+    debug!("arg at 0x{:x}", unsafe { transmute_copy::<_, usize>(&arg) });
     initialize_call_frame(&mut *regs,
-                          init,
-                          arg,
-                          unsafe { transmute(start) },
+                          unsafe { transmute(init) },
+                          unsafe { transmute_copy(&arg) },
                           sp);
-
-    // Scheduler tasks don't have a stack in the "we allocated it" sense,
-    // but rather they run on pthreads stacks. We have complete control over
-    // them in terms of the code running on them (and hopefully they don't
-    // overflow). Additionally, their coroutine stacks are listed as being
-    // zero-length, so that's how we detect what's what here.
-    let stack_base: *const usize = stack.start();
-    let bounds = if sp as libc::usizeptr_t == stack_base as libc::usizeptr_t {
-      None
-    } else {
-      Some((stack_base as usize, sp as usize))
-    };
-    return Context {
+    Context {
       regs: regs,
-      _stack_bounds: bounds,
+      _stack: stack,
+      _closure: arg
     }
   }
 
@@ -98,7 +80,7 @@ impl Context {
   pub fn swap(out_context: &mut Context, in_context: &Context) {
     debug!("swapping contexts");
     let out_regs: &mut Registers = match out_context {
-      &Context { regs: box ref mut r, .. } => r
+      &mut Context { regs: box ref mut r, .. } => r
     };
     let in_regs: &Registers = match in_context {
       &Context { regs: box ref r, .. } => r
@@ -162,8 +144,7 @@ fn new_regs() -> Box<Registers> {
 #[cfg(target_arch = "x86")]
 fn initialize_call_frame(regs: &mut Registers,
                          fptr: InitFn,
-                         arg: usize,
-                         procedure: raw::Procedure,
+                         arg: (usize, usize),
                          sp: *mut usize)
 {
   let sp = sp as *mut usize;
@@ -172,9 +153,8 @@ fn initialize_call_frame(regs: &mut Registers,
   let sp = align_down(sp);
   let sp = mut_offset(sp, -4);
 
-  unsafe { *mut_offset(sp, 2) = procedure.env as usize };
-  unsafe { *mut_offset(sp, 1) = procedure.code as usize };
-  unsafe { *mut_offset(sp, 0) = arg as usize };
+  unsafe { *mut_offset(sp, 1) = arg.1 as usize };
+  unsafe { *mut_offset(sp, 0) = arg.0 as usize };
   let sp = mut_offset(sp, -1);
   unsafe { *sp = 0 }; // The final return address
 
@@ -183,6 +163,9 @@ fn initialize_call_frame(regs: &mut Registers,
 
   // Last base pointer on the stack is 0
   regs.ebp = 0;
+  debug!("esp will be 0x{:x}", regs.esp);
+  debug!("eip will be 0x{:x}", regs.eip);
+  
 }
 
 // windows requires saving more registers (both general and XMM), so the windows
@@ -190,14 +173,14 @@ fn initialize_call_frame(regs: &mut Registers,
 #[cfg(all(windows, target_arch = "x86_64"))]
 #[repr(C)]
 struct Registers {
-  gpr:[libc::usizeptr_t, ..14],
-  _xmm:[simd::u32x4, ..10]
+  gpr:[libc::usizeptr_t; 14],
+  _xmm:[simd::u32x4; 10]
 }
 #[cfg(all(not(windows), target_arch = "x86_64"))]
 #[repr(C)]
 struct Registers {
-  gpr:[libc::usizeptr_t, ..10],
-  _xmm:[simd::u32x4, ..6]
+  gpr:[libc::usizeptr_t; 10],
+  _xmm:[simd::u32x4; 6]
 }
 
 #[cfg(all(windows, target_arch = "x86_64"))]
@@ -259,10 +242,10 @@ fn initialize_call_frame(regs: &mut Registers, fptr: InitFn, arg: usize,
 }
 
 #[cfg(target_arch = "arm")]
-type Registers = [libc::usizeptr_t, ..32];
+type Registers = [libc::usizeptr_t; 32];
 
 #[cfg(target_arch = "arm")]
-fn new_regs() -> Box<Registers> { box {[0, .. 32]} }
+fn new_regs() -> Box<Registers> { box {[0;  32]} }
 
 #[cfg(target_arch = "arm")]
 fn initialize_call_frame(regs: &mut Registers, fptr: InitFn, arg: usize,
@@ -289,11 +272,11 @@ fn initialize_call_frame(regs: &mut Registers, fptr: InitFn, arg: usize,
 
 #[cfg(any(target_arch = "mips",
           target_arch = "mipsel"))]
-type Registers = [libc::usizeptr_t, ..32];
+type Registers = [libc::usizeptr_t; 32];
 
 #[cfg(any(target_arch = "mips",
           target_arch = "mipsel"))]
-fn new_regs() -> Box<Registers> { box {[0, .. 32]} }
+fn new_regs() -> Box<Registers> { box {[0;  32]} }
 
 #[cfg(any(target_arch = "mips",
           target_arch = "mipsel"))]
@@ -321,7 +304,7 @@ fn align_down(sp: *mut usize) -> *mut usize {
 
 // ptr::mut_offset is positive ints only
 #[inline]
-pub fn mut_offset<T>(ptr: *mut T, count: int) -> *mut T {
+pub fn mut_offset<T>(ptr: *mut T, count: isize) -> *mut T {
   use core::mem::size_of;
-  (ptr as int + count * (size_of::<T>() as int)) as *mut T
+  (ptr as isize + count * (size_of::<T>() as isize)) as *mut T
 }

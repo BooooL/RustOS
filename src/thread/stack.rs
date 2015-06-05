@@ -21,7 +21,7 @@ impl Stack {
 
     /// Point one usize beyond the high end of the allocated stack
     pub fn end(&self) -> *const usize {
-        unsafe { self.v.as_ptr().offset(self.v.capacity() as int) as *const usize } // TODO(ryan) overflow on cast?
+        unsafe { self.v.as_ptr().offset(self.v.capacity() as isize) as *const usize } // TODO(ryan) overflow on cast?
     }
 
 }

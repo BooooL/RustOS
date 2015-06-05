@@ -6,7 +6,7 @@
 #![feature(asm)]
 #![feature(lang_items)]
 #![feature(box_syntax)]
-
+#![feature(box_patterns)]
 #![feature(core, alloc, collections)]
 #![feature(no_std)]
 
@@ -32,7 +32,7 @@ use multiboot::multiboot_info;
 use arch::cpu;
 use pci::Pci;
 use driver::DriverManager;
-//use thread::scheduler;
+use thread::scheduler;
 
 #[macro_use]
 mod log;
@@ -45,6 +45,7 @@ mod pci;
 mod rtl8139;
 mod driver;
 mod net;
+mod thread;
 
 mod io;
 
@@ -104,7 +105,7 @@ pub extern "C" fn main(magic: u32, info: *mut multiboot_info) {
 
     //debug!("start scheduling...");
 
-    //scheduler::thread_stuff();
+    scheduler::thread_stuff();
 
     pci_stuff();
 
