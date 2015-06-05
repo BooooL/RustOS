@@ -62,9 +62,10 @@ an interface for adding drivers and libraries)
 3. The current allocator never actually frees data and is just there to get `collections` working.
 
 ### Organization:
-1. Architecture-specific files (mostly) are now in arch/
-2. `std` had been stripped out of dependencies on an OS/libc and is usable (so, we can use stuff `libcore`, `libcollections`, `librand`)
-  * The idea is to move most of the functionality into a runtime library in a fork of rust so we can support `libstd`
+1. Main kernel code in `src/`
+2. Dependencies (`rust` and some others) are in `lib/` 
+  * We're using some vanilla `rust` libraries (essentially `core` and `collections`) and plan to implement
+    the OS-specific bits
 
 ### License
 [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) or the [MIT license](http://opensource.org/licenses/MIT), at your option. See LICENSE-APACHE and LICENSE-MIT for details.
