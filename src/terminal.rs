@@ -7,15 +7,14 @@ use arch::vga;
 
 // TODO(john): next line is still breaking abstractions (but I can't
 // find a nice way to init it either...)
-pub static GLOBAL: spin::Mutex<Terminal> = spin::Mutex {
-  lock: ::core::atomic::ATOMIC_BOOL_INIT,
-  data: UnsafeCell {
-    value: Terminal {
-      current: Point(0,0),
-      vga: 0 as *mut vga::Buffer //&mut vga::GLOBAL.value
-    }
-  },
-};
+lazy_static! {
+    static ref GLOBAL: UnsafeCell<Terminal> = UnsafeCell::new(Terminal::new());
+}
+
+
+pub fn get_terminal() -> &'static mut Terminal {
+    unsafe { ::core::mem::transmute(GLOBAL.get()) } 
+}
 
 struct Point(usize, usize);
 
@@ -26,6 +25,13 @@ pub struct Terminal {
 
 impl Terminal
 {
+  fn new() -> Terminal {
+    Terminal {
+        current: Point(0,0),
+        vga: unsafe { vga::GLOBAL.get() }
+    }
+  }
+
   fn get_vga_mut(&mut self) -> &mut vga::Buffer {
     unsafe { &mut *self.vga }
   }
@@ -74,14 +80,15 @@ impl Terminal
       *self.get_vga_mut() = ::core::mem::zeroed();
     }
   }
+  
 }
 
-pub fn init_global() {
-  let mut guard = GLOBAL.lock();
-  unsafe {
-    guard.vga = vga::GLOBAL.get();
-  }
-  guard.clear_screen();
+impl Drop for Terminal {
+
+    fn drop(&mut self) {
+        debug!("dropping term!");
+    }
+
 }
 
 impl ::io::Writer for Terminal

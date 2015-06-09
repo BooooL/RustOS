@@ -9,11 +9,11 @@ pub extern fn panic_impl(msg: ::core::fmt::Arguments,
 {
   unsafe {
     use io::Writer;
-    let _ = write!(terminal::GLOBAL.lock(), "{}:{} {}", file, line, msg);
+    let _ = write!(terminal::get_terminal(), "{}:{} {}", file, line, msg);
     ::core::intrinsics::abort();
   }
 }
 
 pub unsafe fn init() {
-  terminal::GLOBAL.lock().clear_screen()
+  terminal::get_terminal().clear_screen()
 }

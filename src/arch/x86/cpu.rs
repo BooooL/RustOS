@@ -71,14 +71,17 @@ impl CPU {
     CPU { gdt: gdt, idt: idt, keyboard: None}
   }
 
-  pub fn handle(&mut self, interrupt_number: u32) {
+  pub fn handle(&mut self, interrupt_number: u8) {
     match interrupt_number {
+      0x06 => { warn!("ran illegal instruction!"); loop{}},
       0x20 => (), // timer
-      0x21 => match &mut self.keyboard {
-        &mut Some(ref mut k) => k.got_interrupted(),
-        &mut None            => unsafe { debug("no keyboard installed", 0) }
+      0x21 => {
+        match &mut self.keyboard {
+            &mut Some(ref mut k) => k.got_interrupted(),
+            &mut None            => unsafe { debug("no keyboard installed", 0) }
+        }
       },
-      _ => {debug!("interrupt with no handler: {}", interrupt_number); loop {};}
+      _ => {debug!("interrupt with no handler: {}", interrupt_number); }
     }
     self.acknowledge_irq(interrupt_number);
   }
@@ -91,8 +94,8 @@ impl CPU {
     asm!("hlt" ::::)
   }
 
-  fn acknowledge_irq(&mut self, _: u32) {
-    PIC::master().control_port.out_b(0x20); //TODO(ryan) ugly and only for master PIC
+  fn acknowledge_irq(&mut self, interrupt_number: u8) {
+    PIC::master().control_port.out_b(interrupt_number); //TODO(ryan) ugly and only for master PIC
   }
 
   pub fn make_keyboard(&mut self, callback: fn (u8) -> ()) {
@@ -116,7 +119,7 @@ impl CPU {
 
 #[no_mangle]
 pub extern "C" fn unified_handler(interrupt_number: u32) {
-  current_cpu().handle(interrupt_number);
+  current_cpu().handle(interrupt_number as u8);
 }
 
 #[no_mangle]

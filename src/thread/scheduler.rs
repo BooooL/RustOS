@@ -3,6 +3,7 @@
 use core::prelude::*;
 use core::cell::UnsafeCell;
 use core::mem::{transmute, transmute_copy};
+use core::ptr;
 
 use alloc::boxed::Box;
 
@@ -11,12 +12,14 @@ use collections::LinkedList;
 use thread::context::Context;
 use thread::stack::Stack;
 
+use arch::cpu;
+
 // thread control block
 struct Tcb { 
   context: Context,
 }
 
-// invariant: current thread is at back of queue
+// invariant: current thread is at front of queue
 pub struct Scheduler {
   queue: LinkedList<Tcb>
 }
@@ -33,20 +36,36 @@ pub fn get_scheduler() -> &'static mut Scheduler {
 extern "C" fn run_thunk(thunk: &Fn() -> ()) {
   debug!("in run_thunk");
   thunk();
-  warn!("didn't unschedule finished thread");
-  unreachable!();
+  unreachable!("didn't unschedule finished thread");
 }
 
 
 impl Scheduler {
   
   pub fn new() -> Scheduler {
-    Scheduler { queue: LinkedList::new() }
+    let idle_task = || {
+        loop {
+            // trace!("in idle task");
+            get_scheduler().switch();
+        }
+    };
+    let mut s = Scheduler { queue: LinkedList::new() }; 
+    let tcb = s.new_tcb(box idle_task);
+    s.queue.push_front(tcb);
+    s
+  }
+  
+  pub fn bootstrap_start(&mut self) -> ! {
+    // scheduler now takes control of the CPU
+    // current context is discarded and front of queue is started
+    let mut dont_care = Context::empty();
+    Context::swap(&mut dont_care, &self.queue.front_mut().unwrap().context);
+    unreachable!();
   }
   
   pub fn schedule(&mut self, func: Box<Fn() -> ()>) {
     let new_tcb = self.new_tcb(func);
-    self.queue.push_front(new_tcb);
+    self.queue.push_back(new_tcb);
   }
   
   fn new_tcb(&self, func: Box<Fn() -> ()>) -> Tcb {
@@ -59,20 +78,33 @@ impl Scheduler {
     };
     
     let c = Context::new(run_thunk, box p as Box<Fn() -> ()>, stack);
-    Tcb { context: c}
+    Tcb { context: c }
   }
   
-  fn unschedule_current(&mut self) {
-    let t = self.queue.pop_front().unwrap();
+  fn unschedule_current(&mut self) -> ! {
     debug!("unscheduling");
+    
+    self.queue.pop_front(); // get rid of current
+    let next = self.queue.pop_back().unwrap();
+    self.queue.push_front(next);
+    
     let mut dont_care = Context::empty();
-    Context::swap(&mut dont_care, &t.context);
+    Context::swap(&mut dont_care, &mut self.queue.front_mut().unwrap().context);
+    unreachable!();
   }
   
   pub fn switch(&mut self) {
-    let next = self.queue.pop_front().unwrap();
-    let old_context = &mut self.queue.back_mut().unwrap().context;
-    Context::swap(old_context, &next.context);    
+    if self.queue.len() == 1 {
+        return;
+    }
+    let old = self.queue.pop_front().unwrap();
+    let next = self.queue.pop_back().unwrap();
+    self.queue.push_front(next);
+    self.queue.push_back(old);
+    
+    let back: *mut Context = &mut self.queue.back_mut().unwrap().context;
+    let front = self.queue.front().unwrap();
+    Context::swap(unsafe { back.as_mut().unwrap() }, &front.context);    
   }
   
 }
@@ -99,7 +131,6 @@ pub fn thread_stuff() {
     debug!("orig sched 0x{:x}", transmute_copy::<_, u32>(&s));
     //loop {};
     let t = || { test_thread() };
-    s.schedule(box || { loop {} }); // this will be filled in with current context
     s.schedule(box t);
     debug!("schedule okay");
     s.switch();

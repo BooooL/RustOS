@@ -61,5 +61,8 @@ SWAP_REGISTERS:
     push %ecx
     popf
 
+    // TODO(ryan): better place to enable interrupts?
+    sti
+    
     // Return!
     jmp *48(%eax)

@@ -34,7 +34,7 @@ out:
 
 # u8 -> ()
 interrupt:
-  int $0x20
+  int $0x22
   ret
 
 

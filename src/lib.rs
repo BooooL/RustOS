@@ -14,7 +14,6 @@
 extern crate rlibc;
 
 #[macro_use]
-//extern crate std; // for useful macros and IO interfaces
 extern crate core;
 extern crate alloc;
 extern crate collections;
@@ -67,52 +66,52 @@ fn put_char(c: u8) {
   __print!("{}", c as char);
 }
 
-lazy_static! {
-  static ref TEST: Vec<&'static str> = {
-    let mut v = Vec::new();
-    v.push("hi from lazy static");
-    v
-  };
+#[no_mangle]
+pub extern "C" fn main(magic: u32, info: *mut multiboot_info) -> ! {
+    // some preliminaries
+    bump_ptr::set_allocator((15usize * 1024 * 1024) as *mut u8, (20usize * 1024 * 1024) as *mut u8);
+    unsafe { panic::init(); }
+    let mut c = cpu::current_cpu();
+    unsafe { c.enable_interrupts(); }
+        
+    // we're going to now enter the scheduler to do the rest
+    let bootstrapped_thunk = move || { 
+        bootstrapped_main(magic, info); 
+    };
+    
+    scheduler::get_scheduler().schedule(box bootstrapped_thunk);
+    scheduler::get_scheduler().bootstrap_start(); // okay, scheduler, take it away!
+    unreachable!();
 }
 
-#[no_mangle]
-pub extern "C" fn main(magic: u32, info: *mut multiboot_info) {
+fn bootstrapped_main(magic: u32, info: *mut multiboot_info) {
     unsafe {
-        bump_ptr::set_allocator((15usize * 1024 * 1024) as *mut u8, (20usize * 1024 * 1024) as *mut u8);
-        terminal::init_global();
-    debug!("kernel start!");
-    
-    panic::init();
+        let mut c = cpu::current_cpu();
+        unsafe { c.enable_interrupts(); }
+        c.make_keyboard(put_char);
         
-    test_allocator();
-    
-    if magic != multiboot::MULTIBOOT_BOOTLOADER_MAGIC {
-      panic!("Multiboot magic is invalid");
-    } else {
-      debug!("Multiboot magic is valid. Info at 0x{:x}", info as u32);
-      (*info).multiboot_stuff();
-    }
+        debug!("kernel main thread start!");
 
-    debug!("{}", (**TEST)[0]);
-
-    let mut c = cpu::current_cpu();
-    c.make_keyboard(put_char);
-
-    c.enable_interrupts();
-    debug!("Going to interrupt: ");
-    c.test_interrupt();
-    debug!("    back from interrupt!");
-
-    //debug!("start scheduling...");
-
-    scheduler::thread_stuff();
-
-    pci_stuff();
-
-    info!("Kernel is done!");
-    loop {
-      c.idle()
-    }
+        test_allocator();
+        
+        
+        if magic != multiboot::MULTIBOOT_BOOTLOADER_MAGIC {
+            panic!("Multiboot magic is invalid");
+        } else {
+            debug!("Multiboot magic is valid. Info at 0x{:x}", info as u32);
+            (*info).multiboot_stuff();
+        }
+        
+        
+        debug!("Going to interrupt: ");
+        cpu::current_cpu().test_interrupt();
+        debug!("    back from interrupt!");
+        
+        pci_stuff();
+        
+        scheduler::thread_stuff();
+        
+        info!("Kernel main thread is done!");
   }
 }
 
@@ -138,12 +137,12 @@ pub extern "C" fn debug(s: &'static str, u: u32) {
 
 #[no_mangle]
 pub extern "C" fn __morestack() {
-  loop { } //TODO(ryan) should I do anything here?
+  unreachable!("__morestack");
 }
 
 #[no_mangle]
 pub extern "C" fn abort() -> ! {
-  unsafe { core::intrinsics::abort(); }
+  loop {}
 }
 
 #[no_mangle]

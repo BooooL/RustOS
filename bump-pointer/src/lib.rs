@@ -2,6 +2,7 @@
 #![no_std]
 #![allow(unstable)]
 
+#[macro_use]
 extern crate core;
 
 use core::prelude::*;
@@ -78,6 +79,7 @@ impl Allocator for BumpPointer
     let new_start = aligned + size;
 
     if new_start > self.stop as usize {
+      unreachable!("allocator done!");
       None
     } else {
       self.start = new_start as *mut u8;
