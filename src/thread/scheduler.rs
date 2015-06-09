@@ -39,16 +39,19 @@ extern "C" fn run_thunk(thunk: &Fn() -> ()) {
   unreachable!("didn't unschedule finished thread");
 }
 
-
 impl Scheduler {
   
   pub fn new() -> Scheduler {
     let idle_task = || {
         loop {
-            // trace!("in idle task");
+            trace!("in idle task 1");
+            trace!("wait done");
             get_scheduler().switch();
+            trace!("switch done");
+            loop {}
         }
     };
+
     let mut s = Scheduler { queue: LinkedList::new() }; 
     let tcb = s.new_tcb(box idle_task);
     s.queue.push_front(tcb);
@@ -63,16 +66,12 @@ impl Scheduler {
     unreachable!();
   }
   
-  pub fn schedule(&mut self, func: Box<Fn() -> ()>) {
-    let new_tcb = self.new_tcb(func);
-    self.queue.push_back(new_tcb);
-  }
-  
   fn new_tcb(&self, func: Box<Fn() -> ()>) -> Tcb {
     const STACK_SIZE: usize = 1024 * 1024;
     let stack = Stack::new(STACK_SIZE);
 
     let p = move || {
+      unsafe { cpu::current_cpu().enable_interrupts(); }
       func();
       get_scheduler().unschedule_current();
     };
@@ -81,8 +80,19 @@ impl Scheduler {
     Tcb { context: c }
   }
   
+  pub fn schedule(&mut self, func: Box<Fn() -> ()>) {
+    cpu::current_cpu().disable_interrupts();
+    
+    let new_tcb = self.new_tcb(func);
+    self.queue.push_back(new_tcb);
+    
+    unsafe { cpu::current_cpu().enable_interrupts(); }
+  }
+  
   fn unschedule_current(&mut self) -> ! {
     debug!("unscheduling");
+    
+    cpu::current_cpu().disable_interrupts();
     
     self.queue.pop_front(); // get rid of current
     let next = self.queue.pop_back().unwrap();
@@ -90,10 +100,12 @@ impl Scheduler {
     
     let mut dont_care = Context::empty();
     Context::swap(&mut dont_care, &mut self.queue.front_mut().unwrap().context);
-    unreachable!();
+    unreachable!();    
   }
   
   pub fn switch(&mut self) {
+    cpu::current_cpu().disable_interrupts();
+    
     if self.queue.len() == 1 {
         return;
     }
@@ -104,7 +116,9 @@ impl Scheduler {
     
     let back: *mut Context = &mut self.queue.back_mut().unwrap().context;
     let front = self.queue.front().unwrap();
-    Context::swap(unsafe { back.as_mut().unwrap() }, &front.context);    
+    Context::swap(unsafe { back.as_mut().unwrap() }, &front.context);
+    
+    unsafe { cpu::current_cpu().enable_interrupts(); } // TODO(ryan): make a mutex as enabling/disabling interrupts
   }
   
 }

@@ -60,9 +60,6 @@ SWAP_REGISTERS:
     movl 44(%eax), %ecx
     push %ecx
     popf
-
-    // TODO(ryan): better place to enable interrupts?
-    sti
     
     // Return!
     jmp *48(%eax)

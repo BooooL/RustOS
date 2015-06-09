@@ -47,12 +47,12 @@ interrupt:
 .macro make_all_callbacks, num=50
 .if \num+1
    make_callback %num 
-      pusha
+      pushal
       pushl $\num
       call unified_handler
       
       addl $4, %esp
-      popa
+      popal
       iret
   make_all_callbacks \num-1
 .endif

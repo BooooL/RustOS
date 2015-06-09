@@ -70,7 +70,6 @@ fn put_char(c: u8) {
 pub extern "C" fn main(magic: u32, info: *mut multiboot_info) -> ! {
     // some preliminaries
     bump_ptr::set_allocator((15usize * 1024 * 1024) as *mut u8, (20usize * 1024 * 1024) as *mut u8);
-    unsafe { panic::init(); }
     let mut c = cpu::current_cpu();
     unsafe { c.enable_interrupts(); }
         

@@ -90,8 +90,8 @@ impl CPU {
     self.idt.add_entry(irq as u32, handler);
   }
 
-  pub unsafe fn idle(&mut self) {
-    asm!("hlt" ::::)
+  pub fn idle(&mut self) {
+    unsafe { asm!("hlt" :::: "volatile") }
   }
 
   fn acknowledge_irq(&mut self, interrupt_number: u8) {
@@ -177,7 +177,7 @@ impl Port {
 
   pub fn out_b(&mut self, byte: u8) {
     unsafe {
-      asm!("outb $1, $0" :: "{dx}"(self.port_number), "{al}"(byte) ::)
+      asm!("outb $1, $0" :: "{dx}"(self.port_number), "{al}"(byte) :: "volatile")
     }
   }
 
