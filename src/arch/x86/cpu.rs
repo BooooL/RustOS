@@ -103,8 +103,8 @@ impl CPU {
     //self.register_irq(Keyboard, )
   }
 
-  pub unsafe fn enable_interrupts(&mut self) {
-    IDT::enable_interrupts();
+  pub fn enable_interrupts(&mut self) {
+    unsafe { IDT::enable_interrupts(); }
   }
 
   pub fn disable_interrupts(&mut self) {

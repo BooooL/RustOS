@@ -81,26 +81,36 @@ impl Scheduler {
   }
   
   pub fn schedule(&mut self, func: Box<Fn() -> ()>) {
+    let new = self.new_tcb(func);
+    self.schedule_tcb(new);    
+  }
+  
+  fn schedule_tcb(&mut self, tcb: Tcb) {
     cpu::current_cpu().disable_interrupts();
     
-    let new_tcb = self.new_tcb(func);
-    self.queue.push_back(new_tcb);
+    self.queue.push_back(tcb);
     
-    unsafe { cpu::current_cpu().enable_interrupts(); }
+    cpu::current_cpu().enable_interrupts();
   }
   
   fn unschedule_current(&mut self) -> ! {
+    let mut dont_care = Tcb { context: Context::empty() };
+    self.do_and_unschedule(|_: Tcb| { &mut dont_care });
+    unreachable!();    
+  }
+  
+  fn do_and_unschedule<'a, F>(&mut self, mut do_something: F) where F : FnMut(Tcb) -> &'a mut Tcb {
     debug!("unscheduling");
     
     cpu::current_cpu().disable_interrupts();
-    
-    self.queue.pop_front(); // get rid of current
+        
+    let save_into = do_something(self.queue.pop_front().unwrap()); // get rid of current
     let next = self.queue.pop_back().unwrap();
     self.queue.push_front(next);
     
-    let mut dont_care = Context::empty();
-    Context::swap(&mut dont_care, &mut self.queue.front_mut().unwrap().context);
-    unreachable!();    
+    Context::swap(&mut save_into.context, &self.queue.front().unwrap().context);
+    
+    cpu::current_cpu().enable_interrupts();
   }
   
   pub fn switch(&mut self) {
@@ -122,6 +132,55 @@ impl Scheduler {
   }
   
 }
+
+struct Mutex {
+    taken: bool,
+    sleepers: LinkedList<Tcb>
+}
+
+impl Mutex {
+
+    fn lock(&mut self) {
+        cpu::current_cpu().disable_interrupts();
+        while self.taken {
+            get_scheduler().do_and_unschedule(|me: Tcb| { 
+                self.sleepers.push_back(me);
+                self.sleepers.back_mut().unwrap()
+            });
+        }
+        self.taken = true;
+        cpu::current_cpu().enable_interrupts();
+    }
+    
+    fn try_lock(&mut self) -> bool {
+        let mut ret;
+        cpu::current_cpu().disable_interrupts();
+        if self.taken {
+            ret = false
+        } else {
+            self.taken = true;
+            ret = true;
+        }
+        cpu::current_cpu().enable_interrupts();
+        return ret;
+    }
+    
+    fn unlock(&mut self) {
+        cpu::current_cpu().disable_interrupts();
+        assert!(self.taken);
+        self.taken = false;
+        match self.sleepers.pop_front() {
+            Some(tcb) => get_scheduler().schedule_tcb(tcb),
+            None => ()
+        }
+        cpu::current_cpu().enable_interrupts();
+    }
+    
+    fn destroy(&mut self) {
+    }
+
+}
+
 
 fn inner_thread_test(arg: usize) {
   debug!("arg is {}", arg)
