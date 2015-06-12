@@ -15,7 +15,7 @@ use thread::stack::Stack;
 use arch::cpu;
 
 // thread control block
-struct Tcb { 
+pub struct Tcb { 
   context: Context,
 }
 
@@ -133,80 +133,126 @@ impl Scheduler {
   
 }
 
-struct Mutex {
-    taken: bool,
-    sleepers: LinkedList<Tcb>
+pub struct Mutex {
+    taken: UnsafeCell<bool>,
+    sleepers: UnsafeCell<LinkedList<Tcb>>
 }
 
 impl Mutex {
 
-    fn lock(&mut self) {
+    pub unsafe fn lock(&self) {
         cpu::current_cpu().disable_interrupts();
-        while self.taken {
+        while *self.taken.get() {
             get_scheduler().do_and_unschedule(|me: Tcb| { 
-                self.sleepers.push_back(me);
-                self.sleepers.back_mut().unwrap()
+                (*self.sleepers.get()).push_back(me);
+                (*self.sleepers.get()).back_mut().unwrap()
             });
         }
-        self.taken = true;
+        *self.taken.get() = true;
         cpu::current_cpu().enable_interrupts();
     }
     
-    fn try_lock(&mut self) -> bool {
+    pub unsafe fn try_lock(&self) -> bool {
         let mut ret;
         cpu::current_cpu().disable_interrupts();
-        if self.taken {
+        if *self.taken.get() {
             ret = false
         } else {
-            self.taken = true;
+            *self.taken.get() = true;
             ret = true;
         }
         cpu::current_cpu().enable_interrupts();
         return ret;
     }
     
-    fn unlock(&mut self) {
+    pub unsafe fn unlock(&self) {
         cpu::current_cpu().disable_interrupts();
-        assert!(self.taken);
-        self.taken = false;
-        match self.sleepers.pop_front() {
+        assert!(*self.taken.get());
+        *self.taken.get() = false;
+        match (*self.sleepers.get()).pop_front() {
             Some(tcb) => get_scheduler().schedule_tcb(tcb),
             None => ()
         }
         cpu::current_cpu().enable_interrupts();
     }
     
-    fn destroy(&mut self) {
+    fn destroy(&self) {
     }
 
 }
 
-
-fn inner_thread_test(arg: usize) {
-  debug!("arg is {}", arg)
+pub struct Condvar {
+    sleepers: UnsafeCell<LinkedList<Tcb>>
 }
 
-extern "C" fn test_thread() {
-  debug!("in a test thread!");
-  inner_thread_test(11);
-  unsafe {
-    let s = get_scheduler();
-    debug!("leaving test thread!"); 
-    s.unschedule_current(); 
-  }
+impl Condvar {
+
+    pub unsafe fn new() -> Condvar {
+        Condvar { sleepers: UnsafeCell::new(LinkedList::new()) }
+    }
+
+    pub unsafe fn notify_one(&self) {
+        cpu::current_cpu().disable_interrupts();
+        match (*self.sleepers.get()).pop_front() {
+            Some(tcb) => get_scheduler().schedule_tcb(tcb),
+            None => ()
+        }
+        cpu::current_cpu().enable_interrupts();
+    }
+
+    pub unsafe fn notify_all(&self) {
+        cpu::current_cpu().disable_interrupts();
+        while !(*self.sleepers.get()).is_empty() {
+            self.notify_one();
+        }
+        cpu::current_cpu().enable_interrupts();
+    }
+
+    pub unsafe fn wait(&self, mutex: &Mutex) {
+        cpu::current_cpu().disable_interrupts();
+        mutex.unlock();
+        get_scheduler().do_and_unschedule(|me: Tcb| { 
+            (*self.sleepers.get()).push_back(me);
+            (*self.sleepers.get()).back_mut().unwrap()
+        });
+        mutex.lock();
+        cpu::current_cpu().enable_interrupts();
+    }
+
+    pub unsafe fn destroy(&self) {
+    }
+
 }
 
-pub fn thread_stuff() {
-  debug!("starting thread test");
-  unsafe {
-    let s: &mut Scheduler = get_scheduler();
+pub struct RWLock;
 
-    debug!("orig sched 0x{:x}", transmute_copy::<_, u32>(&s));
-    //loop {};
-    let t = || { test_thread() };
-    s.schedule(box t);
-    debug!("schedule okay");
-    s.switch();
-    debug!("back");
-  }
+impl RWLock {
+
+    pub unsafe fn read(&self) { unimplemented!(); }
+
+    pub unsafe fn try_read(&self) -> bool { unimplemented!(); }
+
+    pub unsafe fn write(&self) { unimplemented!(); }
+
+    pub unsafe fn try_write(&self) -> bool { unimplemented!(); }
+
+    pub unsafe fn read_unlock(&self) { unimplemented!(); }
+
+    pub unsafe fn write_unlock(&self) { unimplemented!(); }
+
+    pub unsafe fn destroy(&self) { unimplemented!(); }
+
+}
+
+
+pub mod mutex {
+    pub use super::Mutex;
+}
+
+pub mod condvar {
+    pub use super::Condvar;
+}
+
+pub mod rwlock {
+    pub use super::RWLock;
 }
