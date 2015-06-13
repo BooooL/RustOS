@@ -1,8 +1,8 @@
 //#[macro_export]
 macro_rules! __print(
   ($($arg:tt)*) => ({
-    use io::Writer;
-    write!(::terminal::get_terminal(), $($arg)*).ok();
+    use io::Write;
+    write!(::sys::terminal::get_terminal(), $($arg)*).ok();
   })
 );
 

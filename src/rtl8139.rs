@@ -3,9 +3,11 @@ use core::prelude::*;
 //use std::io::IoResult;
 use core::mem::transmute;
 
-use arch::cpu::Port;
-use driver::{Driver, NetworkDriver};
-use pci::{PciManifest, PortGranter};
+use io::Error;
+
+use super::arch::cpu::Port;
+use super::driver::{Driver, NetworkDriver};
+use super::pci::{PciManifest, PortGranter};
 
 pub struct Rtl8139 {
   command_register: Port, // TODO(ryan): better abstraction for registers (i.e., should take byte-width into consideration + also be for mmap)
@@ -60,7 +62,7 @@ impl Driver for Rtl8139 {
 
 impl NetworkDriver for Rtl8139
 {
-  fn put_frame(&mut self, buf: &[u8]) -> Result<usize, ()> {
+  fn put_frame(&mut self, buf: &[u8]) -> Result<usize, Error> {
     let slice_bytes: ::core::raw::Slice<u8> = unsafe { transmute(buf) };
 
     trace!("sending {} bytes", slice_bytes.len);

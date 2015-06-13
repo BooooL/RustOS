@@ -5,6 +5,7 @@ LD=ld -melf_i386 -nostdlib
 QEMU=qemu-system-i386
 TARGET=i686-unknown-linux-gnu
 QEMUARGS=-device rtl8139,vlan=0 -net user,id=net0,vlan=0 -net dump,vlan=0,file=/tmp/rustos-dump.pcap
+SRC=src/
 
 .PHONY: all clean cleanproj run debug vb target/$(TARGET)/librustos*.a rustos
 
@@ -20,29 +21,29 @@ debug: boot.bin
 vb: boot.iso
 	virtualbox --debug --startvm rustos
 
-rustos: target/$(TARGET)/debug/librustos*.a src/*.rs
+rustos: target/$(TARGET)/debug/librustos*.a $(SRC)/*.rs
 
 
 target/$(TARGET)/debug/librustos*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a
-	cargo rustc --target $(TARGET) --verbose -- -L .
+	cargo rustc --features rustos --target $(TARGET) --verbose -- -L .
 
-boot.bin: src/arch/x86/link.ld boot.o target/$(TARGET)/debug/librustos*.a interrupt.o context.o dependencies.o
+boot.bin: $(SRC)/arch/x86/link.ld boot.o target/$(TARGET)/debug/librustos*.a interrupt.o context.o dependencies.o
 	$(LD) -o $@ -T $^
 
 boot.iso: boot.bin
 	cp boot.bin src/isodir/boot/
 	grub-mkrescue -o boot.iso src/isodir
 
-compiler-rt.o: src/dummy-compiler-rt.s # needed for staticlib creation
+compiler-rt.o: $(SRC)/dummy-compiler-rt.s # needed for staticlib creation
 	$(AS)  -o $@ $<
 
 %.s: ../rust/src/rt/arch/i386/%.S
 	$(CPP) -o $@ $<
 
-%.o: src/arch/x86/%.s
+%.o: $(SRC)/arch/x86/%.s
 	$(AS)  -o $@ $<
 
-%.o: src/%.s
+%.o: $(SRC)/%.s
 	$(AS)  -o $@ $<
 
 lib%.a: %.o

@@ -1,7 +1,6 @@
 use core::prelude::*;
 use core::mem::{transmute, size_of};
-
-use collections::Vec;
+use vec::Vec;
 
 static IDT_SIZE: usize = 256;
 

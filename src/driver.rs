@@ -1,10 +1,9 @@
 use core::prelude::*;
 
 use alloc::boxed::Box;
+use vec::Vec;
 
-use collections::Vec;
-
-use io::*;
+use io::{Write, Error};
 
 pub trait Driver {
 
@@ -22,30 +21,18 @@ pub trait NetworkDriver: Driver {
 
   fn address(&mut self) -> [u8; 6];
 
-  fn put_frame(&mut self, buf: &[u8]) -> Result<usize, ()>;
+  fn put_frame(&mut self, buf: &[u8]) -> Result<usize, Error>;
   // TODO(ryan): more
 }
 
-impl<T> Writer for T where T: NetworkDriver
-{
-  type Err = ();
+impl<'a> Write for NetworkDriver + 'a {
 
-  fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+  fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
     match self.put_frame(buf) {
       Ok(_)  => Ok(buf.len()),
-      Err(_) => Err(())
+      Err(x) => Err(x)
     }
   }
-}
-
-impl<'a> Writer for NetworkDriver + 'a
-{
-  type Err = ();
-
-  fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
-    match self.put_frame(buf) {
-      Ok(_)  => Ok(buf.len()),
-      Err(_) => Err(())
-    }
-  }
+  
+  fn flush(&mut self) -> Result<(), Error> { Ok(()) }
 }

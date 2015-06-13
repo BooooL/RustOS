@@ -4,15 +4,17 @@ use core::prelude::*;
 use core::cell::UnsafeCell;
 use core::mem::{transmute, transmute_copy};
 use core::ptr;
+use io;
+use time::Duration;
 
-use alloc::boxed::Box;
+use alloc::boxed::{Box, FnBox};
 
-use collections::LinkedList;
+use super::linked_list::LinkedList;
 
-use thread::context::Context;
-use thread::stack::Stack;
+use super::context::Context;
+use super::stack::Stack;
 
-use arch::cpu;
+use super::super::arch::cpu;
 
 // thread control block
 struct Tcb { 
@@ -133,52 +135,215 @@ impl Scheduler {
   
 }
 
-struct Mutex {
-    taken: bool,
-    sleepers: LinkedList<Tcb>
+unsafe impl Send for Mutex {}
+unsafe impl Sync for Mutex {}
+
+pub const MUTEX_INIT: Mutex = Mutex { taken: UnsafeCell{ value: false }, sleepers: UnsafeCell { value : new_linked_list!() }};
+
+pub struct Mutex {
+    taken: UnsafeCell<bool>,
+    sleepers: UnsafeCell<LinkedList<Tcb>>
 }
 
 impl Mutex {
 
-    fn lock(&mut self) {
+    pub unsafe fn lock(&self) {
         cpu::current_cpu().disable_interrupts();
-        while self.taken {
+        while *self.taken.get() {
             get_scheduler().do_and_unschedule(|me: Tcb| { 
-                self.sleepers.push_back(me);
-                self.sleepers.back_mut().unwrap()
+                (*self.sleepers.get()).push_back(me);
+                (*self.sleepers.get()).back_mut().unwrap()
             });
         }
-        self.taken = true;
+        *self.taken.get() = true;
         cpu::current_cpu().enable_interrupts();
     }
     
-    fn try_lock(&mut self) -> bool {
+    pub unsafe fn  try_lock(&self) -> bool {
         let mut ret;
         cpu::current_cpu().disable_interrupts();
-        if self.taken {
+        if *self.taken.get() {
             ret = false
         } else {
-            self.taken = true;
+            *self.taken.get() = true;
             ret = true;
         }
         cpu::current_cpu().enable_interrupts();
         return ret;
     }
     
-    fn unlock(&mut self) {
+    pub unsafe fn unlock(&self) {
         cpu::current_cpu().disable_interrupts();
-        assert!(self.taken);
-        self.taken = false;
-        match self.sleepers.pop_front() {
+        assert!(*self.taken.get());
+        *self.taken.get() = false;
+        match (*self.sleepers.get()).pop_front() {
             Some(tcb) => get_scheduler().schedule_tcb(tcb),
             None => ()
         }
         cpu::current_cpu().enable_interrupts();
     }
     
-    fn destroy(&mut self) {
+    pub unsafe fn destroy(&self) {
     }
 
+}
+
+unsafe impl Send for Condvar {}
+unsafe impl Sync for Condvar {}
+
+pub const CONDVAR_INIT: Condvar = Condvar { sleepers: UnsafeCell { value: new_linked_list!() }};
+
+pub struct Condvar {
+    sleepers: UnsafeCell<LinkedList<Tcb>>
+}
+
+impl Condvar {
+
+    pub unsafe fn new() -> Condvar {
+        Condvar { sleepers: UnsafeCell::new(LinkedList::new()) }
+    }
+
+    pub unsafe fn notify_one(&self) {
+        cpu::current_cpu().disable_interrupts();
+        match (*self.sleepers.get()).pop_front() {
+            Some(tcb) => get_scheduler().schedule_tcb(tcb),
+            None => ()
+        }
+        cpu::current_cpu().enable_interrupts();
+    }
+
+    pub unsafe fn notify_all(&self) {
+        cpu::current_cpu().disable_interrupts();
+        while !(*self.sleepers.get()).is_empty() {
+            self.notify_one();
+        }
+        cpu::current_cpu().enable_interrupts();
+    }
+
+    pub unsafe fn wait(&self, mutex: &Mutex) {
+        cpu::current_cpu().disable_interrupts();
+        mutex.unlock();
+        get_scheduler().do_and_unschedule(|me: Tcb| { 
+            (*self.sleepers.get()).push_back(me);
+            (*self.sleepers.get()).back_mut().unwrap()
+        });
+        mutex.lock();
+        cpu::current_cpu().enable_interrupts();
+    }
+    
+    pub unsafe fn wait_timeout(&self, mutex: &Mutex, dur: Duration) -> bool {
+        unimplemented!();
+    }
+
+    pub unsafe fn destroy(&self) {
+    }
+
+}
+
+unsafe impl Send for RWLock {}
+unsafe impl Sync for RWLock {}
+
+pub const RWLOCK_INIT: RWLock = RWLock;
+
+pub struct RWLock;
+
+impl RWLock {
+
+    fn new() -> RWLock { RWLock }
+
+    pub unsafe fn read(&self) { unimplemented!(); }
+
+    pub unsafe fn try_read(&self) -> bool { unimplemented!(); }
+
+    pub unsafe fn write(&self) { unimplemented!(); }
+
+    pub unsafe fn try_write(&self) -> bool { unimplemented!(); }
+
+    pub unsafe fn read_unlock(&self) { unimplemented!(); }
+
+    pub unsafe fn write_unlock(&self) { unimplemented!(); }
+
+    pub unsafe fn destroy(&self) { unimplemented!(); }
+
+}
+
+unsafe impl Send for ReentrantMutex {}
+unsafe impl Sync for ReentrantMutex {}
+
+pub struct ReentrantMutex;
+
+impl ReentrantMutex {
+    pub unsafe fn uninitialized() -> ReentrantMutex {
+        unimplemented!();
+    }
+
+    pub unsafe fn init(&mut self) {
+        unimplemented!();
+    }
+
+    pub unsafe fn lock(&self) {
+        unimplemented!();
+    }
+
+    #[inline]
+    pub unsafe fn try_lock(&self) -> bool {
+        unimplemented!();
+    }
+
+    pub unsafe fn unlock(&self) {
+        unimplemented!();
+    }
+
+    pub unsafe fn destroy(&self) {
+        unimplemented!();
+    }
+}
+
+pub struct Thread;
+
+unsafe impl Send for Thread {}
+unsafe impl Sync for Thread {}
+
+impl Thread {
+    pub unsafe fn new<'a>(stack: usize, p: Box<FnBox() + 'a>)
+                          -> io::Result<Thread> {
+        unimplemented!();
+    }
+
+    pub fn yield_now() {
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    pub fn set_name(name: &str) {
+    }
+
+    pub fn sleep(dur: Duration) {
+    }
+
+    pub fn join(self) {
+    }
+}
+
+pub type Key = usize;
+
+#[inline]
+pub unsafe fn create(dtor: Option<unsafe extern fn(*mut u8)>) -> Key {
+    unimplemented!();
+}
+
+#[inline]
+pub unsafe fn set(key: Key, value: *mut u8) {
+    unimplemented!();
+}
+
+#[inline]
+pub unsafe fn get(key: Key) -> *mut u8 {
+    unimplemented!();
+}
+
+#[inline]
+pub unsafe fn destroy(key: Key) {
+    unimplemented!();
 }
 
 

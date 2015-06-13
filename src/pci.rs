@@ -4,11 +4,11 @@ use core::mem::{transmute, size_of};
 
 use alloc::boxed::Box;
 
-use collections::Vec;
+use vec::Vec;
 
-use arch::cpu::Port;
-use rtl8139::Rtl8139;
-use driver::{DriverManager, NetworkDriver};
+use super::arch::cpu::Port;
+use super::rtl8139::Rtl8139;
+use super::driver::{DriverManager, NetworkDriver};
 
 pub struct PciManifest {
   pub register_limit: usize,

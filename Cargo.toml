@@ -6,7 +6,10 @@ authors = [ "you@example.com" ]
 [lib]
 name = "rustos"
 crate-type = [ "staticlib" ]
+path = "src/libstd/lib.rs"
 
+[features]
+rustos = []
 
 [dependencies.core]
 path = "lib/rust/cargo/core"
@@ -19,15 +22,20 @@ features = [ "external_crate" ]
 [dependencies.collections]
 path = "lib/rust/cargo/collections"
 
+[dependencies.rand]
+path = "lib/rust/cargo/rand"
+
+[dependencies.rustc_unicode]
+path = "lib/rust/cargo/unicode"
+
+[dependencies.libc]
+path = "lib/rust/cargo/libc"
+
 [dependencies.external]
 path = "bump-pointer"
 
 [dependencies.lazy_static]
 path = "lib/lazy-static.rs"
-
-[dependencies.spin]
-path = "lib/spinlock-rs"
-features = [ "no_std" ]
 
 [dependencies.rlibc]
 path = "lib/rlibc"

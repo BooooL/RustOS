@@ -1,8 +1,7 @@
 // stack interface for RustOS
 
 use core::prelude::*;
-
-use collections::Vec;
+use vec::Vec;
 
 pub struct Stack {
     v: Vec<u8>

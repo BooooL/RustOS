@@ -18,7 +18,7 @@ use core::simd;
 
 use alloc::boxed::Box;
 
-use thread::stack::Stack;
+use super::stack::Stack;
 
 #[allow(non_camel_case_types)]
 mod libc {

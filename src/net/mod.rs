@@ -3,9 +3,9 @@ use core::mem::{size_of, transmute};
 
 use alloc::boxed::Box;
 
-use driver::NetworkDriver;
+use super::driver::NetworkDriver;
 
-use io::Writer;
+use io::Write;
 
 pub struct NetworkStack {
   card: Box<NetworkDriver + 'static>

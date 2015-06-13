@@ -2,12 +2,12 @@ use core::prelude::*;
 use core::cell::UnsafeCell;
 use core::mem::transmute;
 
-use io::{self, Reader, Writer};
+use io::{self, Read, Write, Error};
 
-use arch::idt::IDT;
-use arch::gdt::GDT;
+use super::idt::IDT;
+use super::gdt::GDT;
 
-use arch::keyboard::Keyboard;
+use super::keyboard::Keyboard;
 
 // TODO remove box hack. It says it has a global destructor but I don't know why
 lazy_static! {
@@ -117,12 +117,10 @@ impl CPU {
 
 }
 
-#[no_mangle]
 pub extern "C" fn unified_handler(interrupt_number: u32) {
   current_cpu().handle(interrupt_number as u8);
 }
 
-#[no_mangle]
 pub extern "C" fn add_entry(idt: &mut IDT, index: u32, f: unsafe extern "C" fn() -> ()) {
   idt.add_entry(index, f);
 }
@@ -215,15 +213,9 @@ impl Port {
 
 }
 
-impl io::Reader for Port
+impl io::Read for Port
 {
-  type Err = (); // TODO use bottom type
-
-  //fn read_u8(&mut self) -> Result<u8, ()> {
-  //  Ok(self.in_b())
-  //}
-
-  fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+  fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
     for el in buf.iter_mut() {
       *el = self.in_b();
     }
@@ -232,23 +224,16 @@ impl io::Reader for Port
 
 }
 
-impl io::Writer for Port
+impl io::Write for Port
 {
-  type Err = (); // TODO use bottom type
-
-  //fn write_u8(&mut self, byte: u8) -> Result<(), ()> {
-  //  self.out_b(byte);
-  //  Ok(())
-  //}
-
-  fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+  fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
     for &byte in buf.iter() {
       self.out_b(byte);
     }
     Ok(buf.len())
   }
 
-  fn flush(&mut self) -> Result<(), ()> {
+  fn flush(&mut self) -> Result<(), Error> {
     Ok(())
   }
 }

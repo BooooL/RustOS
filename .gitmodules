@@ -1,9 +1,6 @@
 [submodule "lib/rust"]
 	path = lib/rust
 	url = https://github.com/ryanra/rust.git
-[submodule "lib/spinlock-rs"]
-	path = lib/spinlock-rs
-	url = https://github.com/ryanra/spinlock-rs.git
 [submodule "lib/rlibc"]
 	path = lib/rlibc
 	url = https://github.com/ryanra/rlibc.git

@@ -1,9 +1,7 @@
 use core::prelude::*;
 use core::cell::UnsafeCell;
 
-use spin;
-
-use arch::vga;
+use super::arch::vga;
 
 // TODO(john): next line is still breaking abstractions (but I can't
 // find a nice way to init it either...)
@@ -91,14 +89,17 @@ impl Drop for Terminal {
 
 }
 
-impl ::io::Writer for Terminal
-{
-  type Err = ();
+impl ::io::Write for Terminal {
 
-  fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
+  fn write(&mut self, buf: &[u8]) -> Result<usize, ::io::Error> {
     for &c in buf.iter() {
       self.put_char(c);
     }
     Ok(buf.len())
   }
+  
+  fn flush(&mut self) -> Result<(), ::io::Error> {
+    Ok(())
+  }
+  
 }
