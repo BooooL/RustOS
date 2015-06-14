@@ -118,13 +118,11 @@ impl CPU {
 }
 
 #[no_mangle]
-#[unstable(feature = "debug")]
 pub extern "C" fn unified_handler(interrupt_number: u32) {
   current_cpu().handle(interrupt_number as u8);
 }
 
 #[no_mangle]
-#[unstable(feature = "debug")]
 pub extern "C" fn add_entry(idt: &mut IDT, index: u32, f: unsafe extern "C" fn() -> ()) {
   idt.add_entry(index, f);
 }
