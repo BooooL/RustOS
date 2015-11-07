@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = [ "you@example.com" ]
 
 [lib]
-name = "rustos"
+name = "std"
 crate-type = [ "staticlib" ]
 path = "src/libstd/lib.rs"
 
@@ -18,6 +18,9 @@ path = "lib/rust/cargo/core"
 path = "lib/rust/cargo/alloc"
 default-features = false
 features = [ "external_crate" ]
+
+[dependencies.alloc_system]
+path = "lib/rust/cargo/alloc_system"
 
 [dependencies.collections]
 path = "lib/rust/cargo/collections"

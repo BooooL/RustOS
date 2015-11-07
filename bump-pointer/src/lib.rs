@@ -1,9 +1,6 @@
-#![feature(no_std, core)]
+#![feature(no_std)]
 #![no_std]
 #![allow(unstable)]
-
-#[macro_use]
-extern crate core;
 
 use core::prelude::*;
 
