@@ -22,6 +22,11 @@ A simple, [language-based](https://en.wikipedia.org/wiki/Language-based_system) 
 4. Run:
   * On qemu: `make run`
   * Or, make an iso `make iso` and run it on a VM or real hardware!
+  
+### Organization:
+1. Main kernel code now in a fork of rust's libstd
+2. There is a libstd symlink to the bulk of the code (links to rust submodule at `lib/rust/src/libstd/`)
+3. Almost RustOS rust code is in `src/libstd/sys/rustos/` which is a link to [`lib/rust/src/libstd/sys/rustos/`](https://github.com/ryanra/rust/tree/master/src/libstd/sys/rustos)
 
 ### Design goals:
 1. Implement the entire Rust standard library *on bare metal*. Essentially, 
@@ -60,12 +65,6 @@ an interface for adding drivers and libraries)
 1. ~~Linkage probelms~~ fixed!
 2. Threading is buggy and needs more attention and more features.
 3. The current allocator never actually frees data and is just there to get `collections` working.
-
-### Organization:
-1. Main kernel code in `src/`
-2. Dependencies (`rust` and some others) are in `lib/` 
-  * We're using some vanilla `rust` libraries (essentially `core` and `collections`) and plan to implement
-    the OS-specific bits
 
 ### License
 [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) or the [MIT license](http://opensource.org/licenses/MIT), at your option. See LICENSE-APACHE and LICENSE-MIT for details.
