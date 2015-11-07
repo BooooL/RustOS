@@ -15,8 +15,8 @@ A simple, [language-based](https://en.wikipedia.org/wiki/Language-based_system) 
   * qemu (emulator) **or** grub-mkrescue (run an iso on a VM or hardware)
   * as
   * ld
-  * rustc (1.2.0-nightly)
-  * cargo (1.2.0-nightly)
+  * rustc (1.6.0-nightly)
+  * cargo (1.6.0-nightly)
 2. Pull this repo `git clone https://github.com/ryanra/RustOS.git`
 3. Make sure to pull the submodules as well: `git submodule update --init`
 4. Run:
