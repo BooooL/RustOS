@@ -31,9 +31,6 @@ path = "lib/rust/cargo/rand"
 [dependencies.rustc_unicode]
 path = "lib/rust/cargo/unicode"
 
-[dependencies.libc]
-path = "lib/rust/cargo/libc"
-
 [dependencies.external]
 path = "bump-pointer"
 
@@ -42,3 +39,8 @@ path = "lib/lazy-static.rs"
 
 [dependencies.rlibc]
 path = "lib/rlibc"
+
+[dependencies.libc]
+path = "lib/rust/src/liblibc"
+features = []
+default-features = false

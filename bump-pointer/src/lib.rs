@@ -93,36 +93,28 @@ impl Allocator for BumpPointer
   }
 }
 
-pub fn allocate(size: usize, align: usize) -> *mut u8 {
-  unsafe {
-    match allocator.allocate(size, align) {
-    Some(ptr) => ptr,
-    None      => 0 as *mut u8
-    }
-  }
-}
-
-pub fn deallocate(ptr: *mut u8, old_size: usize, align: usize) {
-  unsafe {
-    allocator.deallocate(ptr, old_size, align)
-  }
-}
-
-pub fn reallocate(ptr: *mut u8, old_size: usize, size: usize,
-                              align: usize) -> *mut u8 {
-  unsafe {
-    match allocator.reallocate(ptr, old_size, size, align) {
+pub unsafe fn allocate(size: usize, align: usize) -> *mut u8 {
+  match allocator.allocate(size, align) {
       Some(ptr) => ptr,
       None      => 0 as *mut u8
-    }
   }
 }
 
-pub fn reallocate_inplace(ptr: *mut u8, old_size: usize, size: usize,
-                                      align: usize) -> usize {
-  unsafe {
-    allocator.reallocate_inplace(ptr, old_size, size, align)
+pub unsafe fn deallocate(ptr: *mut u8, old_size: usize, align: usize) {
+  allocator.deallocate(ptr, old_size, align)
+}
+
+pub unsafe fn reallocate(ptr: *mut u8, old_size: usize, size: usize,
+                              align: usize) -> *mut u8 {
+  match allocator.reallocate(ptr, old_size, size, align) {
+    Some(ptr) => ptr,
+    None      => 0 as *mut u8
   }
+}
+
+pub unsafe fn reallocate_inplace(ptr: *mut u8, old_size: usize, size: usize,
+                                      align: usize) -> usize {
+  allocator.reallocate_inplace(ptr, old_size, size, align)
 }
 
 pub fn usable_size(size: usize, align: usize) -> usize {
