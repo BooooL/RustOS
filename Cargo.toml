@@ -42,5 +42,10 @@ path = "lib/rlibc"
 
 [dependencies.libc]
 path = "lib/rust/src/liblibc"
-features = []
 default-features = false
+
+[dependencies.fringe]
+path = "lib/libfringe"
+version = "1.2.1"
+default-features = false
+features = ["bare_metal"]

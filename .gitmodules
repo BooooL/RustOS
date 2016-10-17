@@ -10,3 +10,6 @@
 [submodule "lib/lazy-static.rs"]
 	path = lib/lazy-static.rs
 	url = https://github.com/ryanra/lazy-static.rs.git
+[submodule "lib/libfringe"]
+	path = lib/libfringe
+	url = https://github.com/nathan7/libfringe.git
