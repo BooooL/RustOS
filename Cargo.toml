@@ -48,4 +48,4 @@ default-features = false
 path = "lib/libfringe"
 version = "1.2.1"
 default-features = false
-features = ["bare_metal"]
+features = ["enable_alloc", "bare_metal"]
