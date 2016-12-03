@@ -11,31 +11,8 @@ path = "src/libstd/lib.rs"
 [features]
 rustos = []
 
-[dependencies.core]
-path = "lib/rust/cargo/core"
-
-[dependencies.alloc]
-path = "lib/rust/cargo/alloc"
-default-features = false
-features = [ "external_crate" ]
-
-[dependencies.alloc_system]
-path = "lib/rust/cargo/alloc_system"
-
-[dependencies.collections]
-path = "lib/rust/cargo/collections"
-
-[dependencies.rand]
-path = "lib/rust/cargo/rand"
-
-[dependencies.rustc_unicode]
-path = "lib/rust/cargo/unicode"
-
 [dependencies.external]
 path = "bump-pointer"
-
-[dependencies.lazy_static]
-path = "lib/lazy-static.rs"
 
 [dependencies.rlibc]
 path = "lib/rlibc"
@@ -49,3 +26,6 @@ path = "lib/libfringe"
 version = "1.2.1"
 default-features = false
 features = ["enable_alloc", "bare_metal"]
+
+[dependencies.lazy_static]
+path = "lib/lazy-static.rs"

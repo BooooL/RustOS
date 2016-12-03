@@ -9,7 +9,3 @@ features = [ "no_std" ]
 
 [lib]
 name = "external"
-
-[dependencies.core]
-path = "../lib/rust/cargo/core"
-
