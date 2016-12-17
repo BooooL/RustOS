@@ -3,9 +3,11 @@
 AS=as -march=i386 --32
 LD=ld -melf_i386 -nostdlib
 QEMU=qemu-system-i386
-TARGET=i686-unknown-linux-gnu
+TARGET=i686-unknown-rustos-gnu
+TARGET_SPEC=$(shell realpath ./$(TARGET))
 QEMUARGS=-device rtl8139,vlan=0 -net user,id=net0,vlan=0 -net dump,vlan=0,file=/tmp/rustos-dump.pcap
 SRC=src/
+DEPS=lib/rust/cargo/std_deps
 
 .PHONY: all clean cleanproj run debug vb target/$(TARGET)/libstd*.a rustos
 
@@ -23,9 +25,11 @@ vb: boot.iso
 
 rustos: target/$(TARGET)/debug/libstd*.a $(SRC)/*.rs
 
+deps: lib/rust/cargo/std_deps/Cargo.toml
+	ln -f -s $(shell realpath $(TARGET).json) $(DEPS) && cd $(DEPS) && cargo rustc --release --target $(TARGET) --verbose
 
-target/$(TARGET)/debug/libstd*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a
-	cargo rustc --features rustos --target $(TARGET) --verbose -- -L .
+target/$(TARGET)/debug/libstd*.a: Cargo.toml libmorestack.a libcompiler-rt.a lib_context.a  deps
+	RUSTFLAGS="--sysroot=$(shell realpath .) -L ." cargo build --target $(TARGET) --verbose
 
 boot.bin: $(SRC)/arch/x86/link.ld boot.o target/$(TARGET)/debug/libstd*.a interrupt.o context.o dependencies.o
 	$(LD) -o $@ -T $^
@@ -52,7 +56,8 @@ lib%.a: %.o
 
 clean: cleanproj
 	cargo clean
+	cd lib/rust/cargo/std_deps && cargo clean
 
 cleanproj:
-	cargo clean -p rustos
+	cargo clean
 	rm -f *.bin *.img *.iso *.rlib *.a *.so *.o *.s target/$(TARGET)/debug/libstd*.a

@@ -15,17 +15,13 @@ rustos = []
 path = "bump-pointer"
 
 [dependencies.rlibc]
-path = "lib/rlibc"
-
-[dependencies.libc]
-path = "lib/rust/src/liblibc"
-default-features = false
+git = "https://github.com/alexcrichton/rlibc"
+rev = "defb486e765846417a8e73329e8c5196f1dca49a"
 
 [dependencies.fringe]
-path = "lib/libfringe"
-version = "1.2.1"
-default-features = false
-features = ["enable_alloc", "bare_metal"]
+git = "https://github.com/nathan7/libfringe"
+rev = "45ae3505c95f607f3d9e2618a4e619c87df13b29"
+no-default-features = true
 
 [dependencies.lazy_static]
 path = "lib/lazy-static.rs"
