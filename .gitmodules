@@ -13,3 +13,6 @@
 [submodule "lib/libfringe"]
 	path = lib/libfringe
 	url = https://github.com/nathan7/libfringe.git
+[submodule "lib/barn"]
+	path = lib/barn
+	url = file://barn

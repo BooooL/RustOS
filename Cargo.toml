@@ -21,7 +21,10 @@ rev = "defb486e765846417a8e73329e8c5196f1dca49a"
 [dependencies.fringe]
 git = "https://github.com/nathan7/libfringe"
 rev = "45ae3505c95f607f3d9e2618a4e619c87df13b29"
-no-default-features = true
 
 [dependencies.lazy_static]
 path = "lib/lazy-static.rs"
+
+[dependencies.barn]
+path = "lib/barn"
+default-features = false
